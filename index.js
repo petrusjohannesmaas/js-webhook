@@ -9,7 +9,7 @@ const { createClient } = require('redis');
 const app = express();
 const PORT = 3000;
 
-// --- NEW: Serve static files from 'public' directory ---
+// --- Serve static files from 'public' directory ---
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Redis Client Setup ---
@@ -57,8 +57,8 @@ const adminAuth = (req, res, next) => {
 // --- Helper Functions ---
 
 /**
- * REWRITTEN: logWebhookToDb()
- * No changes needed here, this function is still correct.
+ * logWebhookToDb()
+ * No changes needed here.
  */
 const logWebhookToDb = async (req) => {
   const logId = `log:${Date.now()}:${Math.random().toString(36).substring(2, 7)}`;
@@ -84,8 +84,9 @@ const logWebhookToDb = async (req) => {
 /**
  * REFACTORED: getLogsByStatus()
  *
- * Replaces getLogsAsHtml(). It now fetches logs based on status
- * and builds the new HTML card component.
+ * This function is now much simpler. It only returns the log grid.
+ * All polling and button-swapping logic has been REMOVED and
+ * now lives in the static HTML files, which is more robust.
  */
 const getLogsByStatus = async (status) => {
   const redisSet = `logs:${status}`; // 'logs:unreviewed' or 'logs:reviewed'
@@ -98,6 +99,7 @@ const getLogsByStatus = async (status) => {
     return '<p>Error connecting to Redis.</p>';
   }
 
+  // Handle the case of no logs
   if (logIds.length === 0) {
     return `<div class="log-entry"><p>No ${status} logs found.</p></div>`;
   }
@@ -117,49 +119,20 @@ const getLogsByStatus = async (status) => {
   }
 
   // Get timestamp of the newest log for notification script
-  // We use the raw timestamp from the ID for comparison
   const newestTimestamp = logIds[0] ? logIds[0].split(':')[1] : 0;
-  
-  // -- Polling & View Swap Logic --
-  // We dynamically add the polling trigger ONLY to the 'unreviewed' view.
-  // We also include the HTMX snippet to swap the button text.
-  let pollingTrigger = '';
-  let buttonSwapHtml = '';
-  
-  if (status === 'unreviewed') {
-    pollingTrigger = 'hx-trigger="every 2s"'; // Poll only this view
-    buttonSwapHtml = `
-      <div id="swap-to-reviewed" hx-swap-oob="innerHTML:#view-toggle">
-        <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l1.409 1.409m-7.5 7.5h.008v.008h-.008v-.008Zm0 0h.008v.008h-.008v-.008Zm-3.75 0h.008v.008h-.008v-.008Zm0 0h.008v.008h-.008v-.008Z" /></svg>
-        View Reviewed
-      </div>
-    `;
-  } else {
-    // This is the 'reviewed' view
-    buttonSwapHtml = `
-      <div id="swap-to-unreviewed" hx-swap-oob="innerHTML:#view-toggle"
-           hx-get="/logs/unreviewed"
-           hx-target="#log-container"
-           hx-swap="innerHTML"
-           hx-push-url="true"
-           hx-indicator="#log-container">
-        <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 14.25-6.22-6.22a2.25 2.25 0 0 0-3.18 0l-6.22 6.22m15 0H3.75" /></svg>
-        View Unreviewed
-      </div>
-    `;
-  }
   
   // Map each log object to the new HTML card
   const logCards = logs.map((log, index) => {
-    if (!log) return '';
+    if (!log) return ''; // Handle potential null entry
     try {
       const payload = JSON.parse(log.payload);
-      const headers = JSON.parse(log.headers); // We still parse it, though not used in UI
       
       // Helper function for safe links
       const createLink = (url, text) => {
         if (!url) return 'N/A';
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
+        // Ensure URL has a protocol
+        let safeUrl = url.startsWith('http') ? url : `https://${url}`;
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
       };
 
       // UPDATED HTML card based on your 'Params'
@@ -175,22 +148,19 @@ const getLogsByStatus = async (status) => {
           <p><strong>Profile:</strong> ${createLink(payload.data?.profile_url, payload.data?.profile_name)}</p>
           <p><strong>Post URL:</strong> ${createLink(payload.data?.post_url, 'View Post')}</p>
           <p><strong>Group URL:</strong> ${createLink(payload.data?.group_url, 'View Group')}</p>
-
-          </div>
+        </div>
       `;
     } catch (parseErr) {
       return `<div class="log-entry"><p>Error parsing log entry: ${logIds[index]}</p></div>`;
     }
   }).join('');
   
-  // Return the full HTML block, including the grid wrapper
-  // We add the buttonSwapHtml here, which HTMX will process using 'hx-swap-oob'
+  // Return the full HTML block.
+  // This is clean, simple, and just returns the data grid.
   return `
-    ${buttonSwapHtml} 
     <div 
       class="log-grid" 
       data-newest-timestamp="${newestTimestamp}"
-      ${pollingTrigger}
     >
       ${logCards}
     </div>
@@ -200,15 +170,23 @@ const getLogsByStatus = async (status) => {
 // --- Routes ---
 
 /**
- * REFACTORED: Root route
- * Serves the static index.html file.
+ * Root route
+ * Serves the static index.html file (Unreviewed logs)
  */
 app.get('/', adminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 /**
- * NEW: Unreviewed Logs Route
+ * NEW: Reviewed Logs Route
+ * Serves the static reviewed.html file
+ */
+app.get('/reviewed', adminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'reviewed.html'));
+});
+
+/**
+ * HTMX: Unreviewed Logs Endpoint
  * Serves the HTML fragment for unreviewed logs.
  */
 app.get('/logs/unreviewed', adminAuth, async (req, res) => {
@@ -217,7 +195,7 @@ app.get('/logs/unreviewed', adminAuth, async (req, res) => {
 });
 
 /**
- * NEW: Reviewed Logs Route
+ * HTMX: Reviewed Logs Endpoint
  * Serves the HTML fragment for reviewed logs.
  */
 app.get('/logs/reviewed', adminAuth, async (req, res) => {
@@ -227,7 +205,7 @@ app.get('/logs/reviewed', adminAuth, async (req, res) => {
 
 /**
  * Webhook endpoint
- * No change here, it still calls logWebhookToDb()
+ * No change here.
  */
 app.post('/api/webhook', webhookWhitelist, (req, res) => {
   console.log('--- 🔔 New Alert Received! ---');
@@ -238,7 +216,7 @@ app.post('/api/webhook', webhookWhitelist, (req, res) => {
 // --- Server Start ---
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Webhook server listening on http://0.0.0.0:${PORT}`);
-  console.log(`📡 Ready for Tailscale Funnel on port ${PORT}`);
+  console.log(`📡 Ready for Tailscale Funnel on port ${PORT}`); // <-- FIXED LINE
   console.log(`🔑 Admin dashboard available on your Tailscale URL`);
   console.log(`💾 Logging data to: Redis (${process.env.REDIS_URL || 'redis://127.0.0.1:6379'})`);
 });

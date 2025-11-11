@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect50 - GroupsWatcher</title>
+  <title>Connect50 - Reviewed Logs</title>
   
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   
@@ -151,104 +151,4 @@
     
     .log-header {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border-color);
-    }
-    
-    .log-message {
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-    
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 99px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      text-transform: capitalize;
-    }
-    
-    .status-unreviewed {
-      background-color: #166534; /* Dark Green */
-      color: #bbf7d0;
-    }
-    
-    .status-reviewed {
-      background-color: #4b5563; /* Gray */
-      color: #d1d5db;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <div class="container nav-bar">
-      <h1>Connect50 - GroupsWatcher</h1>
-      
-      <a 
-        href="/reviewed"
-        class="toggle-button"
-      >
-        <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l1.409 1.409m-7.5 7.5h.008v.008h-.008v-.008Zm0 0h.008v.008h-.008v-.008Zm-3.75 0h.008v.008h-.008v-.008Zm0 0h.008v.008h-.008v-.008Z" /></svg>
-        View Reviewed
-      </a>
-
-    </div>
-  </header>
-
-  <main class="container">
-    <div 
-      id="log-container"
-      hx-get="/logs/unreviewed"
-      hx-trigger="load, every 2s"
-    >
-      <p>Loading logs...</p>
-    </div>
-  </main>
-
-  <script>
-    // This script enables browser notifications
-    function requestNotificationPermission() {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }
-    
-    // Call it once on load to ask the user
-    document.addEventListener('DOMContentLoaded', requestNotificationPermission);
-    
-    let currentNewestTimestamp = 0;
-
-    // Listen for the HTMX event 'htmx:afterSwap'
-    document.body.addEventListener('htmx:afterSwap', function(event) {
-      // Find the new log grid
-      const logGrid = event.detail.target.querySelector('.log-grid');
-      if (!logGrid) return; // Didn't load a log grid
-      
-      // Get the timestamp from the data-attribute
-      const newTimestamp = parseInt(logGrid.dataset.newestTimestamp || 0, 10);
-
-      if (currentNewestTimestamp === 0) {
-        currentNewestTimestamp = newTimestamp;
-        return;
-      }
-      
-      if (newTimestamp > currentNewestTimestamp) {
-        console.log('New log detected! Showing notification.');
-        currentNewestTimestamp = newTimestamp;
-        
-        if (Notification.permission === 'granted') {
-          new Notification('New GroupsWatcher Alert', {
-            body: 'A new post has been detected.',
-            icon: 'https://groupswatcher.com/favicon.ico'
-          });
-        }
-      }
-    });
-  </script>
-
-</body>
-</html>
+      justify-content: space
