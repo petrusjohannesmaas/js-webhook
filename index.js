@@ -126,6 +126,7 @@ const getLogsByStatus = async (status) => {
     if (!log) return ''; // Handle potential null entry
     try {
       const payload = JSON.parse(log.payload);
+      const logId = logIds[index]; // <-- NEW: Get the unique Redis key
       
       // Helper function for safe links
       const createLink = (url, text) => {
@@ -135,9 +136,26 @@ const getLogsByStatus = async (status) => {
         return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
       };
 
-      // UPDATED HTML card based on your 'Params'
+      // --- NEW: Add a review button only if the status is 'unreviewed' ---
+      let reviewButton = '';
+      if (log.status === 'unreviewed') {
+        reviewButton = `
+          <button 
+            class="review-button"
+            hx-post="/log/${logId}/review"
+            hx-target="closest .log-entry"
+            hx-swap="outerHTML"
+            hx-confirm="Are you sure you want to mark this log as reviewed?"
+          >
+            Mark as Reviewed
+          </button>
+        `;
+      }
+      // -----------------------------------------------------------------
+
+      // UPDATED HTML card
       return `
-        <div class="log-entry">
+        <div class="log-entry" id="log-${logId}">
           <div class="log-header">
             <span class="log-message">${payload.message || 'N/A'}</span>
             <span class="status-badge status-${log.status}">${log.status}</span>
@@ -148,7 +166,8 @@ const getLogsByStatus = async (status) => {
           <p><strong>Profile:</strong> ${createLink(payload.data?.profile_url, payload.data?.profile_name)}</p>
           <p><strong>Post URL:</strong> ${createLink(payload.data?.post_url, 'View Post')}</p>
           <p><strong>Group URL:</strong> ${createLink(payload.data?.group_url, 'View Group')}</p>
-        </div>
+
+          ${reviewButton} </div>
       `;
     } catch (parseErr) {
       return `<div class="log-entry"><p>Error parsing log entry: ${logIds[index]}</p></div>`;
@@ -156,7 +175,6 @@ const getLogsByStatus = async (status) => {
   }).join('');
   
   // Return the full HTML block.
-  // This is clean, simple, and just returns the data grid.
   return `
     <div 
       class="log-grid" 
@@ -205,12 +223,49 @@ app.get('/logs/reviewed', adminAuth, async (req, res) => {
 
 /**
  * Webhook endpoint
- * No change here.
  */
 app.post('/api/webhook', webhookWhitelist, (req, res) => {
   console.log('--- 🔔 New Alert Received! ---');
   logWebhookToDb(req);
   res.status(200).send('Alert received successfully');
+});
+
+/**
+ * NEW: Mark a log as reviewed
+ * This endpoint is called by the HTMX button from the 'unreviewed' page.
+ */
+app.post('/log/:id/review', adminAuth, async (req, res) => {
+  const logId = req.params.id;
+  
+  // Basic validation to prevent bad requests
+  if (!logId || !logId.startsWith('log:')) {
+    return res.status(400).send('<p>Invalid Log ID.</p>');
+  }
+
+  try {
+    console.log(`[Redis] Marking as reviewed: ${logId}`);
+    
+    // Use a MULTI transaction to do this atomically
+    const multi = redisClient.multi();
+    
+    // 1. Set the 'status' field of the hash to 'reviewed'
+    multi.HSET(logId, 'status', 'reviewed');
+    
+    // 2. Move the ID from the unreviewed set to the reviewed set
+    multi.SMOVE('logs:unreviewed', 'logs:reviewed', logId);
+    
+    // Execute the transaction
+    await multi.exec();
+    
+    // Send an empty 200 OK. 
+    // Because the button has hx-target="closest .log-entry" and hx-swap="outerHTML",
+    // HTMX will replace the entire card with this empty string, making it disappear.
+    res.status(200).send(''); 
+
+  } catch (err) {
+    console.error('Redis error marking log as reviewed:', err);
+    res.status(500).send('<p>Server error. Could not update log.</p>');
+  }
 });
 
 // --- Server Start ---

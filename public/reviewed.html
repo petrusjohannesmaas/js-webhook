@@ -151,4 +151,86 @@
     
     .log-header {
       display: flex;
-      justify-content: space
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .log-message {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    
+    .status-unreviewed {
+      background-color: #166534; /* Dark Green */
+      color: #bbf7d0;
+    }
+    
+    .status-reviewed {
+      background-color: #4b5563; /* Gray */
+      color: #d1d5db;
+    }
+
+    .status-reviewed {
+      background-color: #4b5563; /* Gray */
+      color: #d1d5db;
+    }
+
+    .review-button {
+      background-color: var(--accent-green);
+      color: #052e16; /* Dark green text */
+      font-weight: 600;
+      border: none;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      text-align: center;
+      transition: background-color 0.2s ease;
+      margin-top: 1rem; /* Add space above the button */
+    }
+    
+    .review-button:hover {
+      background-color: #4ade80; /* Lighter green on hover */
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav-bar">
+      <h1>Connect50 - Reviewed Logs</h1>
+      
+      <a 
+        href="/"
+        class="toggle-button"
+      >
+        <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 14.25-6.22-6.22a2.25 2.25 0 0 0-3.18 0l-6.22 6.22m15 0H3.75" /></svg>
+        View Unreviewed
+      </a>
+
+    </div>
+  </header>
+
+  <main class="container">
+    <div 
+      id="log-container"
+      hx-get="/logs/reviewed"
+      hx-trigger="load"
+    >
+      <p>Loading reviewed logs...</p>
+    </div>
+  </main>
+
+  </body>
+</html>
