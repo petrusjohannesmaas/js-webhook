@@ -33,21 +33,18 @@ redisClient.on('error', (err) => {
 // --- Middleware ---
 app.use(express.json());
 
+// Middleware to whitelist GroupsWatcher requests (NOW OPEN)
 const webhookWhitelist = (req, res, next) => {
-  const sentFrom = req.headers['x-sent-from'];
-  if (sentFrom === 'GroupsWatcher.com') {
-    next();
-  } else {
-    console.warn(`[FORBIDDEN] Blocked request from ${req.ip}. Header 'x-sent-from' was: ${sentFrom}`);
-    res.status(403).send('Forbidden: Invalid Source');
-  }
+  // This middleware is now open and allows all requests.
+  // It no longer checks for 'x-sent-from' or IP.
+  next(); // Always continue to the route handler
 };
 
 const adminAuth = (req, res, next) => {
   const user = basicAuth(req);
-  if (user && 
-      user.name === process.env.ADMIN_USER && 
-      user.pass === process.env.ADMIN_PASS) {
+  if (user &&
+    user.name === process.env.ADMIN_USER &&
+    user.pass === process.env.ADMIN_PASS) {
     return next();
   }
   res.setHeader('WWW-Authenticate', 'Basic realm="Admin Dashboard"');
@@ -109,7 +106,7 @@ const getLogsByStatus = async (status) => {
 
   const multi = redisClient.multi();
   logIds.forEach(id => multi.HGETALL(id));
-  
+
   let logs;
   try {
     logs = await multi.exec();
@@ -120,14 +117,14 @@ const getLogsByStatus = async (status) => {
 
   // Get timestamp of the newest log for notification script
   const newestTimestamp = logIds[0] ? logIds[0].split(':')[1] : 0;
-  
+
   // Map each log object to the new HTML card
   const logCards = logs.map((log, index) => {
     if (!log) return ''; // Handle potential null entry
     try {
       const payload = JSON.parse(log.payload);
       const logId = logIds[index]; // <-- NEW: Get the unique Redis key
-      
+
       // Helper function for safe links
       const createLink = (url, text) => {
         if (!url) return 'N/A';
@@ -157,23 +154,24 @@ const getLogsByStatus = async (status) => {
       return `
         <div class="log-entry" id="log-${logId}">
           <div class="log-header">
-            <span class="log-message">${payload.message || 'N/A'}</span>
+            <span class="log-message">${payload.group_name || 'N/A'}</span>
             <span class="status-badge status-${log.status}">${log.status}</span>
           </div>
           
-          <p><strong>Timestamp:</strong> ${payload.data?.time_posted || 'N/A'}</p>
-          <p><strong>Post Text:</strong> ${payload.data?.post_text || 'N/A'}</p>
-          <p><strong>Profile:</strong> ${createLink(payload.data?.profile_url, payload.data?.profile_name)}</p>
-          <p><strong>Post URL:</strong> ${createLink(payload.data?.post_url, 'View Post')}</p>
-          <p><strong>Group URL:</strong> ${createLink(payload.data?.group_url, 'View Group')}</p>
+          <p><strong>Timestamp:</strong> ${payload.timestamp || 'N/A'}</p>
+          <p><strong>Post Text:</strong> ${payload.post_text || 'N/A'}</p>
+          <p><strong>Profile:</strong> ${createLink(payload.user_profile_url, payload.poster_name)}</p>
+          <p><strong>Post URL:</strong> ${createLink(payload.post_url, 'View Post')}</p>
+          <p><strong>Group URL:</strong> ${createLink(payload.group_url, payload.group_name || 'View Group')}</p>
 
-          ${reviewButton} </div>
+          ${reviewButton}
+        </div>
       `;
     } catch (parseErr) {
       return `<div class="log-entry"><p>Error parsing log entry: ${logIds[index]}</p></div>`;
     }
   }).join('');
-  
+
   // Return the full HTML block.
   return `
     <div 
@@ -236,7 +234,7 @@ app.post('/api/webhook', webhookWhitelist, (req, res) => {
  */
 app.post('/log/:id/review', adminAuth, async (req, res) => {
   const logId = req.params.id;
-  
+
   // Basic validation to prevent bad requests
   if (!logId || !logId.startsWith('log:')) {
     return res.status(400).send('<p>Invalid Log ID.</p>');
@@ -244,23 +242,23 @@ app.post('/log/:id/review', adminAuth, async (req, res) => {
 
   try {
     console.log(`[Redis] Marking as reviewed: ${logId}`);
-    
+
     // Use a MULTI transaction to do this atomically
     const multi = redisClient.multi();
-    
+
     // 1. Set the 'status' field of the hash to 'reviewed'
     multi.HSET(logId, 'status', 'reviewed');
-    
+
     // 2. Move the ID from the unreviewed set to the reviewed set
     multi.SMOVE('logs:unreviewed', 'logs:reviewed', logId);
-    
+
     // Execute the transaction
     await multi.exec();
-    
+
     // Send an empty 200 OK. 
     // Because the button has hx-target="closest .log-entry" and hx-swap="outerHTML",
     // HTMX will replace the entire card with this empty string, making it disappear.
-    res.status(200).send(''); 
+    res.status(200).send('');
 
   } catch (err) {
     console.error('Redis error marking log as reviewed:', err);
