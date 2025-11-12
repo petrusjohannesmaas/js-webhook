@@ -215,6 +215,33 @@
       background-color: #4ade80;
       /* Lighter green on hover */
     }
+
+    .post-text-details {
+      /* This container holds the summary and full text */
+    }
+
+    .post-text-details summary {
+      cursor: pointer;
+      color: var(--text-main);
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    
+    .post-text-details summary:hover {
+      color: var(--accent-purple); /* Highlights on hover */
+    }
+    
+    .post-text-details[open] summary {
+      /* Optional: style for when it's open */
+      color: var(--text-muted);
+    }
+
+    .post-text-details .full-post-text {
+      padding-top: 0.75rem; /* Space between summary and full text */
+      color: var(--text-muted); /* Muted color for the full text */
+      white-space: pre-wrap;  /* This is key: it preserves newlines from the post */
+      word-break: break-word; /* Ensures long text wraps */
+    }
   </style>
 </head>
 </style>

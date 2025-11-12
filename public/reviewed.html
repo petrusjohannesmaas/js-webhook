@@ -203,20 +203,47 @@
     .review-button:hover {
       background-color: #4ade80; /* Lighter green on hover */
     }
+
+    .post-text-details {
+      /* This container holds the summary and full text */
+    }
+
+    .post-text-details summary {
+      cursor: pointer;
+      color: var(--text-main);
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+    
+    .post-text-details summary:hover {
+      color: var(--accent-purple); /* Highlights on hover */
+    }
+    
+    .post-text-details[open] summary {
+      /* Optional: style for when it's open */
+      color: var(--text-muted);
+    }
+
+    .post-text-details .full-post-text {
+      padding-top: 0.75rem; /* Space between summary and full text */
+      color: var(--text-muted); /* Muted color for the full text */
+      white-space: pre-wrap;  /* This is key: it preserves newlines from the post */
+      word-break: break-word; /* Ensures long text wraps */
+    }
   </style>
 </head>
 <body>
 
   <header>
     <div class="container nav-bar">
-      <h1>Connect50 - Reviewed Logs</h1>
+      <h1>Connect50 - Archived Logs</h1>
       
       <a 
         href="/"
         class="toggle-button"
       >
         <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 14.25-6.22-6.22a2.25 2.25 0 0 0-3.18 0l-6.22 6.22m15 0H3.75" /></svg>
-        View Unreviewed
+        Go back
       </a>
 
     </div>

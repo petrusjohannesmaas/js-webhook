@@ -1,0 +1,96 @@
+{
+  "Financing": [
+    "Business Financing"
+  ],
+  "Events": [
+    "Event Venue/Room",
+    "Event Planner"
+  ],
+  "Security": [
+    "Armed Response & CCTV",
+    "Security Personnel",
+    "Armed Response",
+    "CCTV"
+  ],
+  "Legal": [
+    "Lawyer",
+    "Employment/Labor Law",
+    "Conveyancing"
+  ],
+  "Employment": [
+    "Recruitment Agency"
+  ],
+  "Computer & Programming": [
+    "IT and Networks",
+    "Computer Repairs",
+    "Computer Retailer",
+    "Computer Software"
+  ],
+  "Health": [
+    "Products",
+    "Psychologist",
+    "Optometrist",
+    "General Practitioner",
+    "Dentist",
+    "Specialised Dentistry"
+  ],
+  "Car and Motorcycle": [
+    "Auto/Vehicle Repair",
+    "Auto/Vehicle Parts",
+    "Auto Body Shop"
+  ],
+  "Architecture & Engineering": [
+    "Architectural Services",
+    "Building Plans"
+  ],
+  "Advertising and Marketing": [
+    "Graphic Designer",
+    "Branding/Promotional Items"
+  ],
+  "Construction": [
+    "Roofing Specialist",
+    "Gutters",
+    "Garage Doors",
+    "Paving Installer",
+    "Carpenter",
+    "Kitchen Installer",
+    "Artificial Grass"
+  ],
+  "Transport & Shipping": [
+    "Freight Service",
+    "Courier",
+    "Furniture Removing"
+  ],
+  "Training & Coaching": [
+    "Life Coach",
+    "Learning Centre"
+  ],
+  "Telecommunications": [
+    "Telecommunication Products/Services",
+    "Mobile Telecommunication"
+  ],
+  "Real Estate Services": [
+    "Commercial Real Estate Services",
+    "Cleaning Services"
+  ],
+  "Food and Beverage": [
+    "Restraunt"
+  ],
+  "Retail": [
+    "Water Systems",
+    "Office Supplies",
+    "Office Furniture",
+    "Office Equipment /Machines",
+    "Fuel",
+    "Blinds/Curtains",
+    "Fine Jewelry",
+    "Equipment",
+    "Clothing & Accessories",
+    "Building Material",
+    "Furniture Repair/Upholstery"
+  ],
+  "Accounting": [
+    "Bookkeeping Services",
+    "Auditor Services"
+  ]
+}

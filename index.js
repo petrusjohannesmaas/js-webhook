@@ -81,12 +81,11 @@ const logWebhookToDb = async (req) => {
 /**
  * REFACTORED: getLogsByStatus()
  *
- * This function is now much simpler. It only returns the log grid.
- * All polling and button-swapping logic has been REMOVED and
- * now lives in the static HTML files, which is more robust.
+ * Now includes logic for truncating post text and displaying
+ * the matched keyword.
  */
 const getLogsByStatus = async (status) => {
-  const redisSet = `logs:${status}`; // 'logs:unreviewed' or 'logs:reviewed'
+  const redisSet = `logs:${status}`;
   let logIds;
 
   try {
@@ -96,17 +95,15 @@ const getLogsByStatus = async (status) => {
     return '<p>Error connecting to Redis.</p>';
   }
 
-  // Handle the case of no logs
   if (logIds.length === 0) {
     return `<div class="log-entry"><p>No ${status} logs found.</p></div>`;
   }
 
-  // Sort IDs to show newest first
   logIds.sort((a, b) => b.split(':')[1] - a.split(':')[1]);
 
   const multi = redisClient.multi();
   logIds.forEach(id => multi.HGETALL(id));
-
+  
   let logs;
   try {
     logs = await multi.exec();
@@ -115,25 +112,41 @@ const getLogsByStatus = async (status) => {
     return '<p>Error fetching log details.</p>';
   }
 
-  // Get timestamp of the newest log for notification script
   const newestTimestamp = logIds[0] ? logIds[0].split(':')[1] : 0;
-
-  // Map each log object to the new HTML card
+  
   const logCards = logs.map((log, index) => {
-    if (!log) return ''; // Handle potential null entry
+    if (!log) return '';
     try {
       const payload = JSON.parse(log.payload);
-      const logId = logIds[index]; // <-- NEW: Get the unique Redis key
-
-      // Helper function for safe links
+      const logId = logIds[index];
+      
       const createLink = (url, text) => {
         if (!url) return 'N/A';
-        // Ensure URL has a protocol
         let safeUrl = url.startsWith('http') ? url : `https://${url}`;
         return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
       };
 
-      // --- NEW: Add a review button only if the status is 'unreviewed' ---
+      // --- NEW: Logic for truncated post text ---
+      let postTextHtml = '';
+      const postText = payload.post_text || 'N/A';
+      const CHAR_LIMIT = 20; // Set your character limit here
+
+      if (postText.length <= CHAR_LIMIT) {
+        // If text is short, display it normally
+        postTextHtml = `<p><strong>Post Text:</strong> ${postText}</p>`;
+      } else {
+        // If text is long, wrap it in a <details> element
+        postTextHtml = `
+          <details class="post-text-details">
+            <summary>
+              <strong>Post Text:</strong> ${postText.substring(0, CHAR_LIMIT)}...
+            </summary>
+            <p class="full-post-text">${postText}</p>
+          </details>
+        `;
+      }
+      // --- End new logic ---
+
       let reviewButton = '';
       if (log.status === 'unreviewed') {
         reviewButton = `
@@ -148,31 +161,29 @@ const getLogsByStatus = async (status) => {
           </button>
         `;
       }
-      // -----------------------------------------------------------------
 
-      // UPDATED HTML card
+      // --- UPDATED HTML card ---
       return `
         <div class="log-entry" id="log-${logId}">
           <div class="log-header">
-            <span class="log-message">${payload.group_name || 'N/A'}</span>
+            <span class="log-message">${payload.poster_name || 'N/A'}</span>
             <span class="status-badge status-${log.status}">${log.status}</span>
           </div>
           
           <p><strong>Timestamp:</strong> ${payload.timestamp || 'N/A'}</p>
-          <p><strong>Post Text:</strong> ${payload.post_text || 'N/A'}</p>
-          <p><strong>Profile:</strong> ${createLink(payload.user_profile_url, payload.poster_name)}</p>
+          
+          ${postTextHtml} <p><strong>Profile:</strong> ${createLink(payload.user_profile_url, payload.poster_name)}</p>
           <p><strong>Post URL:</strong> ${createLink(payload.post_url, 'View Post')}</p>
           <p><strong>Group URL:</strong> ${createLink(payload.group_url, payload.group_name || 'View Group')}</p>
-
-          ${reviewButton}
+          
+          <p><strong>Keyword:</strong> ${payload.matched_keyword || 'N/A'}</p> ${reviewButton}
         </div>
       `;
     } catch (parseErr) {
       return `<div class="log-entry"><p>Error parsing log entry: ${logIds[index]}</p></div>`;
     }
   }).join('');
-
-  // Return the full HTML block.
+  
   return `
     <div 
       class="log-grid" 
